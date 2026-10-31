@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import HerdMasterView from './components/HerdMasterView.jsx';
 import DailyMilkSheetView from './components/DailyMilkSheetView.jsx';
 import ExpenseManagementView from './components/ExpenseManagementView.jsx';
+import MilkSalesDispatchView from './components/MilkSalesDispatchView.jsx';
 import { 
   TrendingUp, 
   ChevronDown, 
@@ -37,7 +38,7 @@ import {
 export default function App() {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [activeDay, setActiveDay] = useState('T'); // Thursday
+  const [selectedDayIdx, setSelectedDayIdx] = useState(6); // Default to Oct 27 (Today)
   const [expandedBuffalo, setExpandedBuffalo] = useState(104);
   const [activeShift, setActiveShift] = useState('AM');
   const [milkSubView, setMilkSubView] = useState('sheet'); // 'sheet' (physical format) or 'profiles'
@@ -49,7 +50,7 @@ export default function App() {
   const [showStripTestModal, setShowStripTestModal] = useState(false);
 
   // Dynamic Two-Axis Pricing Calculator state
-  const [calcFat, setCalcFat] = useState(7.5);
+  const [calcFat, setCalcFat] = useState(7.8);
   const [calcSnf, setCalcSnf] = useState(9.0);
   const [rateFat, setRateFat] = useState(700);
   const [rateSnf, setRateSnf] = useState(350);
@@ -63,27 +64,34 @@ export default function App() {
     { id: 'Dashboard', label: 'Dashboard', icon: LayoutDashboard, target: '#top-dashboard', badge: null },
     { id: 'Buffalo Management', label: 'Buffalo Management', icon: Shield, target: null, badge: '64 Head' },
     { id: 'Daily Milk Collection', label: 'Daily Milk Collection', icon: Droplets, target: null, badge: 'Daily Sheet' },
+    { id: 'Milk Sales & Dispatch', label: 'Milk Sales & Dispatch', icon: IndianRupee, target: null, badge: 'Buyers' },
     { id: 'Expense Management', label: 'Expense Management', icon: Receipt, target: null, badge: 'OPEX' },
     { id: 'Shift Milking', label: 'Shed Shift Milking', icon: Activity, target: '#shift-milking', badge: 'AM' },
-    { id: 'Milk Sales & Dispatch', label: 'Milk Sales & Dispatch', icon: IndianRupee, target: '#sales-ledger', badge: null },
     { id: 'Food & OPEX', label: 'Feed & OPEX', icon: Boxes, target: '#feed-runway', badge: 'Alert' },
     { id: 'Breeding & Health', label: 'Breeding & Health', icon: HeartPulse, target: '#breeding-health', badge: '3' },
   ];
 
-  // 7-day yield data
+  // Last 7 days collection synced with DailyMilkSheetView (Oct 21 – Oct 27, 2026)
   const weekData = [
-    { day: 'S', yieldL: 210 },
-    { day: 'M', yieldL: 235 },
-    { day: 'T', yieldL: 242 },
-    { day: 'W', yieldL: 255 },
-    { day: 'T', yieldL: 268, active: true },
-    { day: 'F', yieldL: 248 },
-    { day: 'S', yieldL: 240 },
+    { day: 'W', dateLabel: '21 Oct', yieldL: 471.1, buffaloL: 261.7, cowL: 209.4, amL: 252.6, pmL: 218.5, rev: 34547 },
+    { day: 'T', dateLabel: '22 Oct', yieldL: 474.0, buffaloL: 267.4, cowL: 206.6, amL: 253.2, pmL: 220.8, rev: 34858 },
+    { day: 'F', dateLabel: '23 Oct', yieldL: 476.9, buffaloL: 273.1, cowL: 203.8, amL: 253.8, pmL: 223.1, rev: 35646 },
+    { day: 'S', dateLabel: '24 Oct', yieldL: 471.2, buffaloL: 263.8, cowL: 207.4, amL: 252.4, pmL: 218.8, rev: 34603 },
+    { day: 'S', dateLabel: '25 Oct', yieldL: 474.1, buffaloL: 269.5, cowL: 204.6, amL: 253.0, pmL: 221.1, rev: 34914 },
+    { day: 'M', dateLabel: '26 Oct', yieldL: 477.0, buffaloL: 275.2, cowL: 201.8, amL: 253.6, pmL: 223.4, rev: 35702 },
+    { day: 'T', dateLabel: '27 Oct', yieldL: 480.1, buffaloL: 265.9, cowL: 214.2, amL: 252.2, pmL: 227.9, rev: 35188 },
   ];
+  const activeDayData = weekData[selectedDayIdx] || weekData[6];
 
   const handleNavClick = (item) => {
     setActiveTab(item.id);
-    if (item.id !== 'Daily Milk Collection' && item.id !== 'Buffalo Management' && item.id !== 'Expense Management' && item.target) {
+    if (
+      item.id !== 'Daily Milk Collection' &&
+      item.id !== 'Buffalo Management' &&
+      item.id !== 'Expense Management' &&
+      item.id !== 'Milk Sales & Dispatch' &&
+      item.target
+    ) {
       setTimeout(() => {
         const el = document.querySelector(item.target);
         if (el) el.scrollIntoView({ behavior: 'smooth' });
@@ -240,18 +248,22 @@ export default function App() {
                   ? 'Buffalo Management & Dossier' 
                   : activeTab === 'Daily Milk Collection' 
                     ? 'Daily Milk Collection & Monthly Sheet' 
-                    : activeTab === 'Expense Management'
-                      ? 'Farm Expense Management & Ledger'
-                      : 'Producer Dairy Cockpit'}
+                    : activeTab === 'Milk Sales & Dispatch'
+                      ? 'Milk Sales, Buyers & Dispatch Ledger'
+                      : activeTab === 'Expense Management'
+                        ? 'Farm Expense Management & Ledger'
+                        : 'Producer Dairy Cockpit'}
               </span>
               <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
                 {activeTab === 'Buffalo Management' 
                   ? '64 Animals' 
                   : activeTab === 'Daily Milk Collection' 
                     ? 'Monthly Register' 
-                    : activeTab === 'Expense Management'
-                      ? 'Live OPEX & P&L'
-                      : 'Own Production'}
+                    : activeTab === 'Milk Sales & Dispatch'
+                      ? 'Buyers & Offtake'
+                      : activeTab === 'Expense Management'
+                        ? 'Live OPEX & P&L'
+                        : 'Own Production'}
               </span>
             </h1>
           </div>
@@ -287,70 +299,189 @@ export default function App() {
           <HerdMasterView />
         ) : activeTab === 'Daily Milk Collection' ? (
           <DailyMilkSheetView />
+        ) : activeTab === 'Milk Sales & Dispatch' ? (
+          <MilkSalesDispatchView />
         ) : activeTab === 'Expense Management' ? (
           <ExpenseManagementView />
         ) : (
           <div className="space-y-6">
 
         {/* ======================================================================= */}
-        {/* ROW 1: YIELD TRACKER & TOP PRODUCERS */}
+        {/* TOP EXECUTIVE SYNC STRIP (DAILY MILK COLLECTION + FARM EXPENSE LEDGER)  */}
         {/* ======================================================================= */}
-        <div id="top-dashboard" className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        <div id="top-dashboard" className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+          {/* Card 1: Monthly Milk Collection */}
+          <div 
+            onClick={() => setActiveTab('Daily Milk Collection')}
+            className="bg-white rounded-[22px] p-4 sm:p-5 shadow-sm border border-slate-200/80 hover:border-orange-300 transition-all cursor-pointer group relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#E65100] to-[#FF5722]"></div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Oct 2026 Milk Collection</span>
+              <span className="p-1.5 rounded-xl bg-orange-50 text-[#E65100] group-hover:scale-105 transition-transform">
+                <Droplets className="w-4 h-4" />
+              </span>
+            </div>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 mt-2 tracking-tight">
+              12,817.0 L
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+              <span className="bg-orange-50 text-orange-800 px-2 py-0.5 rounded-md border border-orange-200/60">🐃 7,239.6 L</span>
+              <span className="bg-blue-50 text-blue-800 px-2 py-0.5 rounded-md border border-blue-200/60">🐄 5,577.4 L</span>
+            </div>
+          </div>
 
-          {/* Left: Milk Yield Tracker (7 Cols) */}
+          {/* Card 2: Gross Milk Sales Revenue */}
+          <div 
+            onClick={() => setActiveTab('Milk Sales & Dispatch')}
+            className="bg-white rounded-[22px] p-4 sm:p-5 shadow-sm border border-slate-200/80 hover:border-blue-300 transition-all cursor-pointer group relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-600"></div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Gross Milk Revenue (Oct)</span>
+              <span className="p-1.5 rounded-xl bg-blue-50 text-blue-600 group-hover:scale-105 transition-transform">
+                <IndianRupee className="w-4 h-4" />
+              </span>
+            </div>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 mt-2 tracking-tight">
+              ₹9,44,358
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+              <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md">🐃 ₹84/L • 🐄 ₹60/L</span>
+              <span className="text-blue-700">Today: ₹35,188</span>
+            </div>
+          </div>
+
+          {/* Card 3: Total Farm OPEX */}
+          <div 
+            onClick={() => setActiveTab('Expense Management')}
+            className="bg-white rounded-[22px] p-4 sm:p-5 shadow-sm border border-slate-200/80 hover:border-rose-300 transition-all cursor-pointer group relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-600 to-red-500"></div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Total Farm OPEX (Oct)</span>
+              <span className="p-1.5 rounded-xl bg-rose-50 text-rose-600 group-hover:scale-105 transition-transform">
+                <Receipt className="w-4 h-4" />
+              </span>
+            </div>
+            <p className="text-xl sm:text-2xl font-black text-rose-700 mt-2 tracking-tight">
+              ₹2,24,799
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+              <span className="bg-rose-50 text-rose-700 px-2 py-0.5 rounded-md border border-rose-200/60">17 Bills Paid</span>
+              <span className="text-slate-500">Feed 43.6% • Labor 30.9%</span>
+            </div>
+          </div>
+
+          {/* Card 4: Net Farm Profit */}
+          <div 
+            onClick={() => setActiveTab('Expense Management')}
+            className="bg-white rounded-[22px] p-4 sm:p-5 shadow-sm border border-slate-200/80 hover:border-emerald-300 transition-all cursor-pointer group relative overflow-hidden"
+          >
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-600"></div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Net Farm Profit (Oct)</span>
+              <span className="p-1.5 rounded-xl bg-emerald-50 text-emerald-600 group-hover:scale-105 transition-transform">
+                <TrendingUp className="w-4 h-4" />
+              </span>
+            </div>
+            <p className="text-xl sm:text-2xl font-black text-emerald-700 mt-2 tracking-tight">
+              +₹7,19,559
+            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+              <span className="bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-200/60">76.2% Margin</span>
+              <span className="text-slate-500">FY26: +₹95.92L</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ======================================================================= */}
+        {/* ROW 1: DAILY MILK COLLECTION TRACKER & TOP PRODUCERS                    */}
+        {/* ======================================================================= */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
+          {/* Left: Daily Milk Collection & Monthly Sheet Sync (7 Cols) */}
           <div className="lg:col-span-7 bg-white rounded-[22px] p-5 shadow-sm border border-slate-200/70 flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Activity className="w-4 h-4 text-slate-700" />
-                  <h2 className="text-base font-bold text-slate-900">Milk Yield Tracker</h2>
+                  <Droplets className="w-4 h-4 text-[#E65100]" />
+                  <h2 className="text-base font-bold text-slate-900">Daily Milk Collection Tracker</h2>
+                  <span className="bg-orange-50 text-[#E65100] text-[10px] font-bold px-2 py-0.5 rounded-full border border-orange-200/60">
+                    {activeDayData.dateLabel} 2026
+                  </span>
                 </div>
-                <div className="flex items-center gap-1 bg-slate-100 px-2.5 py-1 rounded-full text-xs font-semibold text-slate-700 cursor-pointer">
-                  <span>Week</span>
-                  <ChevronDown className="w-3 h-3 text-slate-500" />
-                </div>
+                <button
+                  onClick={() => setActiveTab('Daily Milk Collection')}
+                  className="flex items-center gap-1 bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-full text-xs font-bold cursor-pointer transition-colors shadow-xs"
+                >
+                  <span>Open Monthly Sheet</span>
+                  <ArrowRight className="w-3 h-3" />
+                </button>
               </div>
 
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-                {/* Big Stat */}
-                <div className="sm:col-span-5 space-y-1.5">
-                  <span className="text-3xl font-extrabold text-slate-900 tracking-tight">+4.2%</span>
-                  <p className="text-xs text-slate-500 font-medium">485.5 L Today</p>
-                  <div className="flex flex-wrap gap-1 pt-1">
-                    <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold">Fat: 7.42%</span>
-                    <span className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold">SNF: 9.15%</span>
-                    <span className="bg-orange-50 text-[#E65100] px-2 py-0.5 rounded text-[10px] font-bold">Avg: 11.6 L/hd</span>
+                {/* Big Stat synced with DailyMilkSheetView */}
+                <div className="sm:col-span-5 space-y-2">
+                  <div>
+                    <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
+                      {activeDayData.yieldL} L
+                    </span>
+                    <span className="ml-2 text-xs font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      ₹{activeDayData.rev.toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-semibold">
+                    Combined Herd (92 Head) • {activeDayData.dateLabel}
+                  </p>
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between bg-orange-50/70 border border-orange-200/70 px-2.5 py-1.5 rounded-xl text-[11px]">
+                      <span className="font-bold text-orange-950">🐃 Buffalo (64)</span>
+                      <span className="font-black text-[#E65100]">{activeDayData.buffaloL} L • 7.8% Fat</span>
+                    </div>
+                    <div className="flex items-center justify-between bg-blue-50/70 border border-blue-200/70 px-2.5 py-1.5 rounded-xl text-[11px]">
+                      <span className="font-bold text-blue-950">🐄 Cow (28)</span>
+                      <span className="font-black text-blue-700">{activeDayData.cowL} L • 4.4% Fat</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Lollipop Chart */}
-                <div className="sm:col-span-7 flex items-end justify-between px-2 pt-6 pb-1 relative h-36">
+                {/* 7-Day Interactive Collection Chart (Oct 21 – Oct 27) */}
+                <div className="sm:col-span-7 flex items-end justify-between px-2 pt-7 pb-1 relative h-40 bg-slate-50/70 rounded-2xl border border-slate-200/60">
                   {weekData.map((item, idx) => {
-                    const isSelected = item.active;
-                    const heightPercent = Math.round((item.yieldL / 280) * 100);
+                    const isSelected = idx === selectedDayIdx;
+                    const heightPercent = Math.round(((item.yieldL - 440) / 50) * 100);
 
                     return (
-                      <div key={idx} className="flex flex-col items-center relative group">
-                        {isSelected && (
-                          <div className="absolute -top-6 bg-[#181A1E] text-white text-[10px] font-bold px-2 py-0.5 rounded shadow">
-                            268 L
-                          </div>
-                        )}
-                        <div 
-                          className="w-0.5 bg-slate-300 relative flex justify-center cursor-pointer"
-                          style={{ height: `${heightPercent}%` }}
-                        >
-                          <div className={`w-2 h-2 rounded-full absolute -top-1 ${
-                            isSelected ? 'bg-sky-500 ring-4 ring-sky-100' : 'bg-sky-400'
-                          }`} />
+                      <div 
+                        key={idx} 
+                        onClick={() => setSelectedDayIdx(idx)}
+                        className="flex flex-col items-center relative group cursor-pointer flex-1 h-full justify-end"
+                      >
+                        <div className={`mb-1 px-1.5 py-0.5 rounded text-[9px] font-black transition-all ${
+                          isSelected 
+                            ? 'bg-[#181A1E] text-white shadow-xs scale-105' 
+                            : 'text-slate-500 opacity-0 group-hover:opacity-100 bg-white border border-slate-200'
+                        }`}>
+                          {item.yieldL}L
                         </div>
+                        <div 
+                          className={`w-3 sm:w-4 rounded-t-lg transition-all ${
+                            isSelected 
+                              ? 'bg-gradient-to-t from-[#E65100] to-[#FF5722] shadow-sm' 
+                              : 'bg-slate-300 group-hover:bg-slate-400'
+                          }`}
+                          style={{ height: `${Math.max(heightPercent, 25)}%` }}
+                        />
                         <button
-                          onClick={() => setActiveDay(item.day)}
-                          className={`mt-2.5 w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center ${
-                            isSelected ? 'bg-[#181A1E] text-white shadow-sm' : 'text-slate-400 hover:bg-slate-100'
+                          type="button"
+                          onClick={() => setSelectedDayIdx(idx)}
+                          className={`mt-2 px-1.5 py-0.5 rounded-lg text-[10px] font-extrabold flex flex-col items-center leading-tight ${
+                            isSelected ? 'bg-[#181A1E] text-white shadow-xs' : 'text-slate-500 hover:bg-slate-200/70'
                           }`}
                         >
-                          {item.day}
+                          <span>{item.dateLabel.split(' ')[0]}</span>
+                          <span className="text-[8px] opacity-75">Oct</span>
                         </button>
                       </div>
                     );
@@ -359,10 +490,12 @@ export default function App() {
               </div>
             </div>
 
-            <div className="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-              <span>Shift Sync: AM (248.5 L) + PM (237.0 L)</span>
-              <span className="font-semibold text-emerald-600 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Reconciled
+            <div className="mt-3 pt-2.5 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600">
+              <span>
+                Shift Sync ({activeDayData.dateLabel}): <strong className="text-amber-700">☀️ AM ({activeDayData.amL} L)</strong> + <strong className="text-indigo-700">🌙 PM ({activeDayData.pmL} L)</strong>
+              </span>
+              <span className="font-bold text-emerald-700 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Oct Avg: 474.7 L/day (27 Days Logged)
               </span>
             </div>
           </div>
@@ -448,29 +581,32 @@ export default function App() {
         </div>
 
         {/* ======================================================================= */}
-        {/* ROW 2: ACTIVE MILKERS, BUFFER ALERT, LACTATION */}
+        {/* ROW 2: SHED MILKERS & LABOR, FEED OPEX STATUS, HERD BREAKDOWN           */}
         {/* ======================================================================= */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           
-          {/* 1. Milkers */}
+          {/* 1. Milkers & Labor (Synced with Labor & Wages ₹69,400) */}
           <div className="bg-white rounded-[22px] p-5 shadow-sm border border-slate-200/70 flex flex-col justify-between">
             <div>
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-3">Shed Milkers</h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Shed Milkers & Staff</h3>
+                <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full">₹69,400 / mo</span>
+              </div>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
                     <img 
                       src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=80" 
-                      alt="Ramesh Kumar" 
+                      alt="Rameshbhai" 
                       className="w-7 h-7 rounded-full object-cover ring-1 ring-slate-200"
                     />
                     <div>
-                      <p className="font-bold text-xs text-slate-900">Ramesh Kumar</p>
-                      <p className="text-[10px] text-slate-400">Head • Shed A</p>
+                      <p className="font-bold text-xs text-slate-900">Rameshbhai & Team</p>
+                      <p className="text-[10px] text-slate-400">Daily Labour for Cutting Charo • ₹14,400</p>
                     </div>
                   </div>
-                  <button onClick={() => setShowQuickLogModal(true)} className="p-1 rounded-full border border-slate-200 hover:bg-slate-50 text-slate-600">
-                    <Plus className="w-3.5 h-3.5" />
+                  <button onClick={() => setActiveTab('Expense Management')} className="p-1 rounded-full border border-slate-200 hover:bg-slate-50 text-slate-600" title="View in Expense Ledger">
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
@@ -478,46 +614,49 @@ export default function App() {
                   <div className="flex items-center gap-2.5">
                     <img 
                       src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=80" 
-                      alt="Suresh Yadav" 
+                      alt="Sureshbhai" 
                       className="w-7 h-7 rounded-full object-cover ring-1 ring-slate-200"
                     />
                     <div>
-                      <p className="font-bold text-xs text-slate-900">Suresh Yadav</p>
-                      <p className="text-[10px] text-slate-400">Evening • Shed B</p>
+                      <p className="font-bold text-xs text-slate-900">Sureshbhai & 4 Milkers</p>
+                      <p className="text-[10px] text-slate-400">Monthly Staff Salary • ₹55,000</p>
                     </div>
                   </div>
-                  <button onClick={() => setShowQuickLogModal(true)} className="p-1 rounded-full border border-slate-200 hover:bg-slate-50 text-slate-600">
-                    <Plus className="w-3.5 h-3.5" />
+                  <button onClick={() => setActiveTab('Expense Management')} className="p-1 rounded-full border border-slate-200 hover:bg-slate-50 text-slate-600" title="View in Expense Ledger">
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-semibold">
-              <span>Next Shift: 05:30 PM</span>
-              <span className="text-slate-700">4 Active</span>
+            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500 font-semibold">
+              <span>30.9% of Monthly OPEX</span>
+              <span className="text-emerald-700 font-bold">4 Bills Paid</span>
             </div>
           </div>
 
-          {/* 2. Feed Buffer Alert */}
+          {/* 2. Feed & Fodder OPEX Summary (Synced with Feed & Fodder ₹97,900) */}
           <div className="bg-white rounded-[22px] p-5 shadow-sm border border-slate-200/70 flex flex-col justify-between relative overflow-hidden">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                <span className="text-[10px] font-bold text-red-600 uppercase">Critical Inventory</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                  <span className="text-[10px] font-bold text-amber-700 uppercase">Top Cost Center (43.6%)</span>
+                </div>
+                <span className="text-xs font-black text-amber-800">₹97,900</span>
               </div>
-              <h3 className="text-sm font-bold text-slate-900 mt-2">Feed Buffer Depleting</h3>
+              <h3 className="text-sm font-bold text-slate-900 mt-2">Feed & Fodder (ખોરાક અને ભૂસું)</h3>
               <p className="text-xs text-slate-600 mt-1">
-                Mustard Cake (Khal) at <strong className="text-red-600">3 days buffer</strong>.
+                Khod-Bhusu (<strong className="text-slate-900">₹34,000</strong>), Tuver Chunni (<strong className="text-slate-900">₹37,000</strong>) &amp; Charo (<strong className="text-slate-900">₹24,500</strong>).
               </p>
             </div>
 
             <div className="mt-3">
               <button 
-                onClick={() => setShowRestockModal(true)}
-                className="w-full bg-[#181A1E] hover:bg-slate-800 text-white font-semibold text-xs py-2 px-3 rounded-xl flex items-center justify-between transition-colors shadow-sm"
+                onClick={() => setActiveTab('Expense Management')}
+                className="w-full bg-[#181A1E] hover:bg-slate-800 text-white font-semibold text-xs py-2 px-3 rounded-xl flex items-center justify-between transition-colors shadow-sm cursor-pointer"
               >
-                <span>Restock Buffer</span>
+                <span>Manage Feed Expenses</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
             </div>
@@ -528,21 +667,21 @@ export default function App() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Herd Breakdown</h3>
-                <span className="text-[10px] text-slate-400">Total: 64</span>
+                <span className="text-[10px] font-bold text-slate-500">64🐃 + 28🐄 = 92 Head</span>
               </div>
 
               <div className="grid grid-cols-3 gap-1 text-center py-2">
                 <div>
                   <p className="text-[10px] text-slate-400 uppercase font-bold">In Milk</p>
-                  <p className="text-xl font-extrabold text-slate-900">42</p>
+                  <p className="text-xl font-extrabold text-slate-900">68</p>
                 </div>
                 <div className="border-x border-slate-100">
                   <p className="text-[10px] text-slate-400 uppercase font-bold">Dry</p>
-                  <p className="text-xl font-extrabold text-slate-900">14</p>
+                  <p className="text-xl font-extrabold text-slate-900">16</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-400 uppercase font-bold">Due</p>
-                  <p className="text-xl font-extrabold text-slate-900">6</p>
+                  <p className="text-xl font-extrabold text-slate-900">8</p>
                 </div>
               </div>
 
@@ -554,9 +693,9 @@ export default function App() {
             </div>
 
             <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
-              <span className="text-slate-500">Net: <strong className="text-slate-900">₹4,820</strong></span>
-              <span className="text-emerald-600 font-bold">+₹9.93/L</span>
-              <span className="text-slate-700 font-bold">IOFC: ₹18.5k</span>
+              <span className="text-slate-500">Today Rev: <strong className="text-slate-900">₹35,188</strong></span>
+              <span className="text-emerald-600 font-bold">76.2% Margin</span>
+              <span className="text-slate-700 font-bold">Avg: ₹73.7/L</span>
             </div>
           </div>
 
@@ -779,114 +918,183 @@ export default function App() {
             </p>
           </div>
 
-          {/* Feed Runway */}
+          {/* Feed & Fodder Spend Breakdown (Synced with ExpenseManagementView) */}
           <div id="feed-runway" className="lg:col-span-6 bg-white rounded-[22px] p-5 shadow-sm border border-slate-200/70 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                 <div className="flex items-center gap-2">
                   <Boxes className="w-4 h-4 text-amber-700" />
-                  <h3 className="font-bold text-sm text-slate-900">Feed Stock Runway</h3>
+                  <h3 className="font-bold text-sm text-slate-900">Feed &amp; Fodder Ledger (ખોરાક અને ભૂસું)</h3>
                 </div>
-                <button onClick={() => setShowRestockModal(true)} className="text-[10px] font-bold text-slate-700 hover:text-slate-900">
-                  + Restock
+                <button 
+                  onClick={() => setActiveTab('Expense Management')} 
+                  className="text-[11px] font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-full border border-amber-200 cursor-pointer transition-colors"
+                >
+                  ₹97,900 Total →
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-3 mt-3 text-xs">
-                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
+                <div onClick={() => setActiveTab('Expense Management')} className="bg-slate-50 hover:bg-amber-50/40 p-2.5 rounded-xl border border-slate-200/60 cursor-pointer transition-colors">
                   <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold">
-                    <span>Green Napier</span>
-                    <span className="text-emerald-700 font-bold">5.8d</span>
+                    <span>Tuver Chunni (તુવેર ચૂની)</span>
+                    <span className="text-amber-700 font-bold">2 Bills</span>
                   </div>
-                  <p className="text-base font-extrabold text-slate-900 mt-1">1,450 kg</p>
+                  <p className="text-base font-extrabold text-slate-900 mt-1">₹37,000</p>
                 </div>
 
-                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
+                <div onClick={() => setActiveTab('Expense Management')} className="bg-slate-50 hover:bg-amber-50/40 p-2.5 rounded-xl border border-slate-200/60 cursor-pointer transition-colors">
                   <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold">
-                    <span>Dry Bhusa</span>
-                    <span className="text-blue-700 font-bold">4.1d</span>
+                    <span>Khod - Bhusu (ખોળ અને ભૂસું)</span>
+                    <span className="text-blue-700 font-bold">20 Bags</span>
                   </div>
-                  <p className="text-base font-extrabold text-slate-900 mt-1">820 kg</p>
+                  <p className="text-base font-extrabold text-slate-900 mt-1">₹34,000</p>
                 </div>
 
-                <div onClick={() => setShowRestockModal(true)} className="bg-amber-50 p-2.5 rounded-xl border border-amber-300 cursor-pointer">
+                <div onClick={() => setActiveTab('Expense Management')} className="bg-amber-50/70 p-2.5 rounded-xl border border-amber-200 cursor-pointer">
                   <div className="flex justify-between items-center text-[10px] text-amber-900 font-semibold">
-                    <span>Mustard Khal</span>
-                    <span className="bg-red-500 text-white px-1.5 py-0.2 rounded font-bold">2.4d Alert</span>
+                    <span>Bear Charo (બહારનો ચારો)</span>
+                    <span className="bg-amber-200 text-amber-950 px-1.5 py-0.2 rounded font-bold">Dry Fodder</span>
                   </div>
-                  <p className="text-base font-extrabold text-slate-900 mt-1">340 kg</p>
+                  <p className="text-base font-extrabold text-slate-900 mt-1">₹16,000</p>
                 </div>
 
-                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200/60">
+                <div onClick={() => setActiveTab('Expense Management')} className="bg-slate-50 hover:bg-amber-50/40 p-2.5 rounded-xl border border-slate-200/60 cursor-pointer transition-colors">
                   <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold">
-                    <span>Minerals</span>
-                    <span className="text-purple-700 font-bold">11d</span>
+                    <span>Green Charo &amp; Sarso Tel</span>
+                    <span className="text-emerald-700 font-bold">2 Bills</span>
                   </div>
-                  <p className="text-base font-extrabold text-slate-900 mt-1">45 kg</p>
+                  <p className="text-base font-extrabold text-slate-900 mt-1">₹10,900</p>
                 </div>
               </div>
             </div>
 
-            <div className="mt-3 pt-2 border-t border-slate-100 flex justify-between text-[10px] text-slate-500">
-              <span>Ration: ₹142.50 / hd-day</span>
-              <span>FCR: 1.18 kg DMI/L</span>
+            <div className="mt-3 pt-2 border-t border-slate-100 flex justify-between text-[10px] text-slate-500 font-semibold">
+              <span>Daily Labour for Cutting Charo: <strong className="text-slate-900">₹14,400 (3 Bills)</strong></span>
+              <span className="text-amber-700 font-bold">43.6% of Farm OPEX</span>
             </div>
           </div>
 
         </div>
 
         {/* ======================================================================= */}
-        {/* ROW 6: COOPERATIVE DISPATCHES & LEDGER */}
+        {/* ROW 6: FARM EXPENSE MANAGEMENT & MONTHLY P&L RECONCILIATION             */}
         {/* ======================================================================= */}
-        <div id="sales-ledger" className="bg-white rounded-[22px] p-5 shadow-sm border border-slate-200/70">
+        <div id="sales-ledger" className="bg-white rounded-[22px] p-5 shadow-sm border border-slate-200/70 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <IndianRupee className="w-4 h-4 text-emerald-700" />
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                <Receipt className="w-4 h-4" />
+              </div>
               <div>
-                <h3 className="font-bold text-sm text-slate-900">Outward Milk Sales Ledger</h3>
-                <p className="text-[10px] text-slate-400">Direct sales from farm production</p>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-sm text-slate-900">Farm Expense Management &amp; P&amp;L Reconciliation</h3>
+                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                    October 2026
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 font-medium">
+                  Live sync between Daily Milk Collection (₹9,44,358) and Farm Expense Ledger (₹2,24,799)
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <button onClick={() => window.print()} className="text-[11px] font-semibold text-slate-700 bg-slate-100 px-3 py-1 rounded-full hover:bg-slate-200 flex items-center gap-1">
-                <Printer className="w-3 h-3" /> Gate Pass
+            <div className="flex flex-wrap items-center gap-2">
+              <button 
+                onClick={() => setActiveTab('Daily Milk Collection')} 
+                className="text-[11px] font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <Droplets className="w-3.5 h-3.5 text-[#E65100]" /> Milk Sheet
               </button>
-              <button onClick={() => setShowPricingModal(true)} className="text-[11px] font-semibold text-slate-800 bg-white border border-slate-300 px-3 py-1 rounded-full hover:bg-slate-50 flex items-center gap-1 shadow-sm">
-                <Calculator className="w-3 h-3 text-orange-600" /> Pricing Matrix
+              <button 
+                onClick={() => setActiveTab('Milk Sales & Dispatch')} 
+                className="text-[11px] font-bold text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200/80 px-3 py-1.5 rounded-full flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <IndianRupee className="w-3.5 h-3.5 text-blue-600" /> Sales &amp; Buyers
+              </button>
+              <button 
+                onClick={() => setActiveTab('Expense Management')} 
+                className="text-[11px] font-bold text-white bg-[#181A1E] hover:bg-slate-800 px-3.5 py-1.5 rounded-full flex items-center gap-1 shadow-xs cursor-pointer transition-colors"
+              >
+                <Receipt className="w-3.5 h-3.5 text-emerald-400" /> Open Expense Ledger <ArrowRight className="w-3 h-3" />
               </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 text-xs">
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60">
-              <p className="text-[10px] text-slate-400 font-bold uppercase">Est. Revenue</p>
-              <p className="text-lg font-extrabold text-slate-900 mt-1">₹40,416</p>
-              <p className="text-[10px] text-emerald-600 font-bold mt-0.5">+8.4% vs lw</p>
+          {/* 4-Column Balanced Financial Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+            <div 
+              onClick={() => setActiveTab('Milk Sales & Dispatch')}
+              className="bg-slate-50 hover:bg-blue-50/40 p-3.5 rounded-xl border border-slate-200/80 cursor-pointer transition-colors flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Oct Gross Milk Sales</p>
+                <span className="text-[10px] font-extrabold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">🥛 Income</span>
+              </div>
+              <p className="text-lg font-black text-slate-900 mt-1.5">₹9,44,358</p>
+              <p className="text-[10px] text-slate-500 font-semibold mt-0.5">🐃 ₹6,09,196 • 🐄 ₹3,35,457</p>
             </div>
 
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60">
-              <p className="text-[10px] text-slate-400 font-bold uppercase">Daily OPEX</p>
-              <p className="text-lg font-extrabold text-slate-900 mt-1">₹21,800</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">Feed + Labor</p>
+            <div 
+              onClick={() => setActiveTab('Expense Management')}
+              className="bg-rose-50/60 hover:bg-rose-50 p-3.5 rounded-xl border border-rose-200/80 cursor-pointer transition-colors flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-rose-700 font-bold uppercase tracking-wider">Oct Total Farm OPEX</p>
+                <span className="text-[10px] font-extrabold text-rose-700 bg-rose-100/80 px-1.5 py-0.5 rounded">🔻 17 Bills</span>
+              </div>
+              <p className="text-lg font-black text-rose-700 mt-1.5">₹2,24,799</p>
+              <p className="text-[10px] text-rose-600 font-semibold mt-0.5">7 Cost Centers • All Paid</p>
             </div>
 
-            <div className="bg-emerald-50/70 p-3 rounded-xl border border-emerald-200">
-              <p className="text-[10px] text-emerald-800 font-bold uppercase">Net Profit</p>
-              <p className="text-lg font-extrabold text-emerald-800 mt-1">₹18,616</p>
-              <p className="text-[10px] text-emerald-700 font-bold mt-0.5">46% Margin</p>
+            <div 
+              onClick={() => setActiveTab('Expense Management')}
+              className="bg-emerald-50/70 hover:bg-emerald-50 p-3.5 rounded-xl border border-emerald-200 cursor-pointer transition-colors flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-emerald-800 font-bold uppercase tracking-wider">Oct Net Farm Profit</p>
+                <span className="text-[10px] font-extrabold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded">76.2% Margin</span>
+              </div>
+              <p className="text-lg font-black text-emerald-700 mt-1.5">+₹7,19,559</p>
+              <p className="text-[10px] text-emerald-700 font-semibold mt-0.5">Sales − Operating Expenses</p>
             </div>
 
-            <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/60">
-              <p className="text-[10px] text-slate-400 font-bold uppercase">Daily IOFC</p>
-              <p className="text-lg font-extrabold text-slate-900 mt-1">₹24,850</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">₹591 / in-milk</p>
+            <div 
+              onClick={() => setActiveTab('Expense Management')}
+              className="bg-slate-900 text-white p-3.5 rounded-xl border border-slate-800 cursor-pointer transition-colors flex flex-col justify-between"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Whole Year 2026 Net</p>
+                <span className="text-[10px] font-extrabold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.5 rounded">78.1% Margin</span>
+              </div>
+              <p className="text-lg font-black text-emerald-400 mt-1.5">+₹95,92,475</p>
+              <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Sales ₹1.22Cr − OPEX ₹26.83L</p>
             </div>
           </div>
 
-          <div className="mt-3 p-3 bg-slate-50 rounded-xl flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs gap-1">
-            <span className="text-slate-600">Mother Dairy AM Offtake: <strong className="text-slate-900">245 L @ ₹84.10 = ₹20,619</strong></span>
-            <span className="font-semibold text-emerald-700">Bank Transfer Verified</span>
+          {/* 7 Cost Centers Strip synced with ExpenseManagementView */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 pt-1">
+            {[
+              { label: 'Feed & Fodder', gu: 'ખોરાક', amount: '₹97,900', pct: '43.6%', color: 'text-amber-700 bg-amber-50/70 border-amber-200/70' },
+              { label: 'Labor & Wages', gu: 'મજૂરી', amount: '₹69,400', pct: '30.9%', color: 'text-indigo-700 bg-indigo-50/70 border-indigo-200/70' },
+              { label: 'Loans & EMI', gu: 'હપ્તા', amount: '₹22,500', pct: '10.0%', color: 'text-purple-700 bg-purple-50/70 border-purple-200/70' },
+              { label: 'Utilities', gu: 'લાઇટ/નેટ', amount: '₹19,949', pct: '8.9%', color: 'text-cyan-700 bg-cyan-50/70 border-cyan-200/70' },
+              { label: 'Vet & Med', gu: 'તબીબી', amount: '₹6,100', pct: '2.7%', color: 'text-rose-700 bg-rose-50/70 border-rose-200/70' },
+              { label: 'Diesel & Fuel', gu: 'ડીઝલ', amount: '₹4,750', pct: '2.1%', color: 'text-emerald-700 bg-emerald-50/70 border-emerald-200/70' },
+              { label: 'Hardware', gu: 'સાધન', amount: '₹4,200', pct: '1.9%', color: 'text-orange-700 bg-orange-50/70 border-orange-200/70' },
+            ].map((cat, i) => (
+              <div 
+                key={i}
+                onClick={() => setActiveTab('Expense Management')}
+                className={`p-2.5 rounded-xl border ${cat.color} cursor-pointer hover:scale-[1.02] transition-transform`}
+              >
+                <div className="flex items-center justify-between text-[10px] font-bold">
+                  <span className="truncate">{cat.label}</span>
+                  <span className="opacity-80">{cat.pct}</span>
+                </div>
+                <p className="text-xs sm:text-sm font-black mt-1">{cat.amount}</p>
+              </div>
+            ))}
           </div>
         </div>
         </div>
